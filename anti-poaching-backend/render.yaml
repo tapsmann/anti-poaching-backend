@@ -1,14 +1,10 @@
 services:
   - type: web
     name: anti-poaching-backend
-    runtime: python
+    runtime: docker
     plan: free
     region: oregon
-    buildCommand: |
-      python --version
-      pip install --upgrade pip setuptools wheel
-      pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
+    dockerfilePath: Dockerfile
     envVars:
       - key: DATABASE_URL
         sync: false
