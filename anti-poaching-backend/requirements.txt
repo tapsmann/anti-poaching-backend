@@ -55,4 +55,3 @@ email-validator==2.1.0
 # Required
 setuptools==69.0.3
 wheel==0.42.0
-numpy==1.24.3
