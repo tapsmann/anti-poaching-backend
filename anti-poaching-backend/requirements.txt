@@ -12,6 +12,7 @@ psycopg2-binary==2.9.9
 
 # Geo/GIS
 geoalchemy2==0.14.1
+shapely==2.0.1
 folium==0.15.1
 
 # Auth & Security
@@ -51,6 +52,6 @@ httpx==0.25.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# Required dependencies
+# Required
 setuptools==69.0.3
 wheel==0.42.0
