@@ -10,7 +10,7 @@ alembic==1.12.1
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
 
-# Geo/GIS (shapely removed temporarily)
+# Geo/GIS
 geoalchemy2==0.14.1
 folium==0.15.1
 
@@ -30,10 +30,10 @@ pillow==10.1.0
 # ML
 scipy==1.11.4
 
-# SMS Notifications
+# SMS
 twilio==8.13.0
 
-# Real-time communication
+# Real-time
 websockets==12.0
 
 # Monitoring
