@@ -1,4 +1,4 @@
-git """
+"""
 ML package for anti-poaching system.
 Contains model training and prediction modules.
 """
