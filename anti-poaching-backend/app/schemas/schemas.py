@@ -31,7 +31,24 @@ class RangerResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Add missing schemas
+# Add IncidentResponse
+class IncidentResponse(BaseModel):
+    id: int
+    description: Optional[str]
+    risk_score: float
+    timestamp: datetime
+    verified: bool
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    incident_type: Optional[str] = None
+    severity: Optional[str] = None
+    species_id: Optional[int] = None
+    ranger_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+# Add missing schemas for auth
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
