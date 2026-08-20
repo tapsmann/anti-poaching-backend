@@ -181,3 +181,15 @@ class PatrolResponse(BaseModel):
 
     class Config:
         from_attributes = True
+# ============ Prediction Schemas ============
+class PredictionResponse(BaseModel):
+    lat: float
+    lng: float
+    risk_score: float
+    timestamp: datetime
+
+class HotspotResponse(BaseModel):
+    lat: float
+    lng: float
+    risk: float
+    risk_score: float
