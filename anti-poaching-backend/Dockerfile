@@ -1,4 +1,4 @@
-﻿FROM python:3.11-slim
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -29,9 +29,15 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-# Install packages with retries
+# Install numpy first (required for shapely)
+RUN pip install --no-cache-dir numpy==1.24.3
+
+# Install shapely using a pre-built wheel
+RUN pip install --no-cache-dir shapely==2.0.1 --no-build-isolation
+
+# Install the rest of the requirements
 RUN pip install --no-cache-dir --retries 5 -r requirements.txt
 
 COPY . .
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
