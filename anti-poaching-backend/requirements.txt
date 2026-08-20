@@ -1,4 +1,4 @@
-﻿# Core
+# Core
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
@@ -10,9 +10,9 @@ alembic==1.12.1
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
 
-# Geo/GIS (Render-friendly versions)
+# Geo/GIS (using wheel versions that don't need compilation)
 geoalchemy2==0.14.1
-shapely==2.0.2
+shapely==2.0.1
 folium==0.15.1
 
 # Auth & Security
@@ -25,10 +25,10 @@ redis==5.0.1
 celery==5.3.4
 requests==2.31.0
 
-# Image Processing (simplified)
+# Image Processing
 pillow==10.1.0
 
-# ML (simplified)
+# ML
 scipy==1.11.4
 
 # SMS Notifications
@@ -51,3 +51,6 @@ httpx==0.25.0
 # Data Validation
 pydantic==2.5.0
 pydantic-settings==2.1.0
+
+# Required for shapely
+setuptools==69.0.3
