@@ -4,6 +4,7 @@ services:
     runtime: docker
     plan: free
     region: oregon
+    rootDir: anti-poaching-backend
     dockerfilePath: Dockerfile
     envVars:
       - key: DATABASE_URL
