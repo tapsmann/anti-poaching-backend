@@ -22,95 +22,84 @@ def get_db():
         db.close()
 
 def _migrate_columns(engine):
-    """Convert ENUM columns to TEXT and add missing columns."""
+    """Convert ENUM/geometry columns to TEXT and add missing columns."""
     with engine.begin() as conn:
-        enum_to_text = [
+        try:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
+        except Exception:
+            pass
+
+        cols_to_text = [
             ("rangers", "role"), ("rangers", "rank"), ("rangers", "specialization"),
+            ("rangers", "base_location"), ("rangers", "current_location"), ("rangers", "last_known_location"),
             ("protected_areas", "zone_type"), ("protected_areas", "risk_level"),
             ("incidents", "incident_type"), ("incidents", "severity"),
             ("community_reports", "report_type"), ("community_reports", "status"),
             ("patrols", "patrol_type"), ("patrols", "status"),
         ]
-        for table, column in enum_to_text:
+        for table, column in cols_to_text:
             try:
                 result = conn.execute(text(
-                    "SELECT udt_name FROM information_schema.columns "
+                    "SELECT udt_name, data_type FROM information_schema.columns "
                     "WHERE table_name = :t AND column_name = :c"
                 ), {"t": table, "c": column})
                 row = result.fetchone()
-                if row and row[0] != "text":
-                    conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT"))
-                    print(f"  Converted {table}.{column} from {row[0]} to TEXT")
+                if row and row[1] != "text":
+                    udt = row[0]
+                    if udt.startswith("geometry") or row[1] == "USER-DEFINED":
+                        conn.execute(text(
+                            f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT "
+                            f"USING ST_AsText({column})"
+                        ))
+                    else:
+                        conn.execute(text(
+                            f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT"
+                        ))
+                    print(f"  Converted {table}.{column} from {udt} to TEXT")
             except Exception as e:
                 print(f"  Skip convert {table}.{column}: {e}")
 
-    from sqlalchemy import inspect
-    inspector = inspect(engine)
-    migrations = [
-        ("rangers", "assigned_area_id", "INTEGER"),
-    ]
-    for table, column, col_def in migrations:
-        if table in inspector.get_table_names():
-            cols = [c["name"] for c in inspector.get_columns(table)]
-            if column not in cols:
-                try:
-                    with engine.begin() as conn:
-                        conn.execute(text(f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {col_def}'))
-                    print(f"  Migrated: added {table}.{column}")
-                except Exception as e:
-                    print(f"  Migration skip {table}.{column}: {e}")
+        try:
+            conn.execute(text(
+                "ALTER TABLE patrols ALTER COLUMN route DROP NOT NULL"
+            ))
+            print("  Made patrols.route nullable")
+        except Exception:
+            pass
 
 def _ensure_admin_user(engine):
-    """Raw SQL guarantee that at least one admin user exists with correct password."""
+    """UPSERT admin users via raw SQL — always, regardless of existing count."""
     from app.core.security import get_password_hash
     password_hash = get_password_hash("ranger123")
 
     admin_users = [
-        ("Thandeka Ncube", "ZKW-001", "thandeka.ncube@zimparks.co.zw", "+263771000001", "admin", "commander", "quick_response"),
-        ("Gift Muringani", "ZKW-128", "gift.muringani@zimparks.co.zw", "+263771000010", "admin", "commander", "quick_response"),
-        ("Blessing Moyo", "ZKW-004", "blessing.moyo@zimparks.co.zw", "+263771000004", "ranger", "officer", "patrol"),
+        ("Thandeka Ncube", "ZKW-001", "thandeka.ncube@zimparks.co.zw", "+263771000001", "admin"),
+        ("Gift Muringani", "ZKW-128", "gift.muringani@zimparks.co.zw", "+263771000010", "admin"),
+        ("Blessing Moyo", "ZKW-004", "blessing.moyo@zimparks.co.zw", "+263771000004", "ranger"),
     ]
 
     with engine.begin() as conn:
-        result = conn.execute(text("SELECT COUNT(*) FROM rangers"))
-        count = result.scalar()
-
-        if count == 0:
-            print("  Inserting admin users via raw SQL...")
-            for name, badge, email, phone, role, rank, spec in admin_users:
-                try:
-                    conn.execute(text("""
-                        INSERT INTO rangers (name, badge_number, email, phone, role, rank, specialization, is_active, is_on_duty, password_hash, created_at, updated_at)
-                        VALUES (:name, :badge, :email, :phone, :role, :rank, :spec, true, true, :pw, NOW(), NOW())
-                        ON CONFLICT (badge_number) DO UPDATE SET
-                            password_hash = EXCLUDED.password_hash,
-                            role = EXCLUDED.role
-                    """), {"name": name, "badge": badge, "email": email, "phone": phone, "role": role, "rank": rank, "spec": spec, "pw": password_hash})
-                    print(f"    Ensured user: {email}")
-                except Exception as e:
-                    print(f"    Failed to insert {email}: {e}")
-            print(f"  Admin users ready (password: ranger123)")
-        else:
-            print(f"  Database has {count} rangers.")
-            for _, badge, email, phone, role, _, _ in admin_users:
-                try:
-                    conn.execute(text("""
-                        UPDATE rangers SET password_hash = :pw, role = :role
-                        WHERE badge_number = :badge
-                    """), {"pw": password_hash, "role": role, "badge": badge})
-                except Exception as e:
-                    print(f"    Failed to update {email}: {e}")
+        print("  Ensuring admin users...")
+        for name, badge, email, phone, role in admin_users:
+            try:
+                conn.execute(text("""
+                    INSERT INTO rangers (name, badge_number, email, phone, role, is_active, is_on_duty, password_hash, created_at, updated_at)
+                    VALUES (:name, :badge, :email, :phone, :role, true, true, :pw, NOW(), NOW())
+                    ON CONFLICT (email) DO UPDATE SET
+                        password_hash = EXCLUDED.password_hash,
+                        role = EXCLUDED.role,
+                        badge_number = EXCLUDED.badge_number
+                """), {"name": name, "badge": badge, "email": email, "phone": phone, "role": role, "pw": password_hash})
+                print(f"    OK: {email}")
+            except Exception as e:
+                print(f"    FAIL {email}: {e}")
+        print(f"  Users ready (password: ranger123)")
 
 def init_db():
     import app.models
     try:
-        with engine.begin() as conn:
-            try:
-                conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
-            except Exception:
-                print("PostGIS extension not available — continuing without it.")
-        Base.metadata.create_all(bind=engine)
         _migrate_columns(engine)
+        Base.metadata.create_all(bind=engine)
         print("Database initialized successfully!")
 
         _ensure_admin_user(engine)
@@ -119,7 +108,7 @@ def init_db():
             from seed_data import seed_database
             seed_database()
         except Exception as e:
-            print(f"Full seed failed (admin users already guaranteed): {e}")
+            print(f"ORM seed partially failed (admin users guaranteed): {e}")
 
     except Exception as e:
         print(f"Database initialization failed: {e}")
