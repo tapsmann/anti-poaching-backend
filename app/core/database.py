@@ -21,54 +21,70 @@ def get_db():
     finally:
         db.close()
 
-def _migrate_columns(engine):
-    """Convert ENUM/geometry columns to TEXT and add missing columns."""
+def _run_sql(engine, sql, params=None):
+    """Run a single SQL statement in its own transaction."""
     with engine.begin() as conn:
-        try:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
-        except Exception:
-            pass
+        conn.execute(text(sql), params or {})
 
-        cols_to_text = [
-            ("rangers", "role"), ("rangers", "rank"), ("rangers", "specialization"),
-            ("rangers", "base_location"), ("rangers", "current_location"), ("rangers", "last_known_location"),
-            ("protected_areas", "zone_type"), ("protected_areas", "risk_level"),
-            ("incidents", "incident_type"), ("incidents", "severity"),
-            ("community_reports", "report_type"), ("community_reports", "status"),
-            ("patrols", "patrol_type"), ("patrols", "status"),
-        ]
-        for table, column in cols_to_text:
-            try:
-                result = conn.execute(text(
-                    "SELECT udt_name, data_type FROM information_schema.columns "
-                    "WHERE table_name = :t AND column_name = :c"
-                ), {"t": table, "c": column})
-                row = result.fetchone()
-                if row and row[1] != "text":
-                    udt = row[0]
-                    if udt.startswith("geometry") or row[1] == "USER-DEFINED":
-                        conn.execute(text(
-                            f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT "
-                            f"USING ST_AsText({column})"
-                        ))
-                    else:
-                        conn.execute(text(
-                            f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT"
-                        ))
-                    print(f"  Converted {table}.{column} from {udt} to TEXT")
-            except Exception as e:
-                print(f"  Skip convert {table}.{column}: {e}")
-
+def _migrate_columns(engine):
+    """Convert ENUM/geometry columns to TEXT — one statement per transaction."""
+    cols_to_text = [
+        ("rangers", "role"),
+        ("rangers", "rank"),
+        ("rangers", "specialization"),
+        ("protected_areas", "zone_type"),
+        ("protected_areas", "risk_level"),
+        ("incidents", "incident_type"),
+        ("incidents", "severity"),
+        ("community_reports", "report_type"),
+        ("community_reports", "status"),
+        ("patrols", "patrol_type"),
+        ("patrols", "status"),
+    ]
+    for table, column in cols_to_text:
         try:
-            conn.execute(text(
-                "ALTER TABLE patrols ALTER COLUMN route DROP NOT NULL"
-            ))
-            print("  Made patrols.route nullable")
-        except Exception:
-            pass
+            result = engine.connect().execute(text(
+                "SELECT udt_name FROM information_schema.columns "
+                "WHERE table_name = :t AND column_name = :c"
+            ), {"t": table, "c": column})
+            row = result.fetchone()
+            result.close()
+            if row and row[0] != "text":
+                _run_sql(engine, f'ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT')
+                print(f"  Converted {table}.{column} to TEXT")
+        except Exception as e:
+            print(f"  Skip {table}.{column}: {e}")
+
+    geo_cols = [
+        ("rangers", "base_location"),
+        ("rangers", "current_location"),
+        ("rangers", "last_known_location"),
+    ]
+    for table, column in geo_cols:
+        try:
+            result = engine.connect().execute(text(
+                "SELECT udt_name FROM information_schema.columns "
+                "WHERE table_name = :t AND column_name = :c"
+            ), {"t": table, "c": column})
+            row = result.fetchone()
+            result.close()
+            if row and row[0] != "text":
+                try:
+                    _run_sql(engine, f'ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT USING ST_AsText({column})')
+                except Exception:
+                    _run_sql(engine, f'ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT')
+                print(f"  Converted {table}.{column} to TEXT (from geometry)")
+        except Exception as e:
+            print(f"  Skip {table}.{column}: {e}")
+
+    try:
+        _run_sql(engine, "ALTER TABLE patrols ALTER COLUMN route DROP NOT NULL")
+        print("  Made patrols.route nullable")
+    except Exception:
+        pass
 
 def _ensure_admin_user(engine):
-    """UPSERT admin users via raw SQL — always, regardless of existing count."""
+    """UPSERT admin users via raw SQL — always runs."""
     from app.core.security import get_password_hash
     password_hash = get_password_hash("ranger123")
 
@@ -78,10 +94,10 @@ def _ensure_admin_user(engine):
         ("Blessing Moyo", "ZKW-004", "blessing.moyo@zimparks.co.zw", "+263771000004", "ranger"),
     ]
 
-    with engine.begin() as conn:
-        print("  Ensuring admin users...")
-        for name, badge, email, phone, role in admin_users:
-            try:
+    print("  Ensuring admin users...")
+    for name, badge, email, phone, role in admin_users:
+        try:
+            with engine.begin() as conn:
                 conn.execute(text("""
                     INSERT INTO rangers (name, badge_number, email, phone, role, is_active, is_on_duty, password_hash, created_at, updated_at)
                     VALUES (:name, :badge, :email, :phone, :role, true, true, :pw, NOW(), NOW())
@@ -90,10 +106,10 @@ def _ensure_admin_user(engine):
                         role = EXCLUDED.role,
                         badge_number = EXCLUDED.badge_number
                 """), {"name": name, "badge": badge, "email": email, "phone": phone, "role": role, "pw": password_hash})
-                print(f"    OK: {email}")
-            except Exception as e:
-                print(f"    FAIL {email}: {e}")
-        print(f"  Users ready (password: ranger123)")
+            print(f"    OK: {email}")
+        except Exception as e:
+            print(f"    FAIL {email}: {e}")
+    print(f"  Users ready (password: ranger123)")
 
 def init_db():
     import app.models
