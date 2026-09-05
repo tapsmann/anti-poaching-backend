@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
@@ -21,7 +21,7 @@ class PasswordResetConfirm(BaseModel):
 # ============ Ranger Schemas ============
 class RangerCreate(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     badge_number: str
     password: Optional[str] = None
     role: Optional[str] = "ranger"
@@ -33,7 +33,7 @@ class RangerCreate(BaseModel):
 
 class RangerUpdate(BaseModel):
     name: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     badge_number: Optional[str] = None
     role: Optional[str] = None
     rank: Optional[str] = None

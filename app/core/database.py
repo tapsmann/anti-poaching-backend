@@ -21,6 +21,27 @@ def get_db():
     finally:
         db.close()
 
+def _migrate_columns(engine):
+    """Add missing columns to existing tables."""
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    migrations = [
+        ("rangers", "role", "TEXT NOT NULL DEFAULT 'ranger'"),
+        ("rangers", "rank", "TEXT"),
+        ("rangers", "specialization", "TEXT"),
+        ("rangers", "assigned_area_id", "INTEGER"),
+    ]
+    for table, column, col_def in migrations:
+        if table in inspector.get_table_names():
+            cols = [c["name"] for c in inspector.get_columns(table)]
+            if column not in cols:
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
+                    print(f"  Migrated: added {table}.{column}")
+                except Exception as e:
+                    print(f"  Migration skip {table}.{column}: {e}")
+
 def init_db():
     import app.models
     try:
@@ -30,10 +51,11 @@ def init_db():
             except Exception:
                 print("PostGIS extension not available — continuing without it.")
         Base.metadata.create_all(bind=engine)
+        _migrate_columns(engine)
         print("Database initialized successfully!")
 
-        from sqlalchemy import inspect
-        inspector = inspect(engine)
+        from sqlalchemy import inspect as sa_inspect
+        inspector = sa_inspect(engine)
         tables = inspector.get_table_names()
         if "rangers" in tables:
             from sqlalchemy.orm import Session
