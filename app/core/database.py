@@ -22,11 +22,11 @@ def get_db():
         db.close()
 
 def _migrate_columns(engine):
-    """Add missing columns to existing tables."""
+    """Add missing columns to existing tables using raw SQL."""
     from sqlalchemy import inspect
     inspector = inspect(engine)
     migrations = [
-        ("rangers", "role", "TEXT NOT NULL DEFAULT 'ranger'"),
+        ("rangers", "role", "TEXT DEFAULT 'ranger'"),
         ("rangers", "rank", "TEXT"),
         ("rangers", "specialization", "TEXT"),
         ("rangers", "assigned_area_id", "INTEGER"),
@@ -37,7 +37,7 @@ def _migrate_columns(engine):
             if column not in cols:
                 try:
                     with engine.begin() as conn:
-                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
+                        conn.execute(text(f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {col_def}'))
                     print(f"  Migrated: added {table}.{column}")
                 except Exception as e:
                     print(f"  Migration skip {table}.{column}: {e}")
@@ -54,20 +54,15 @@ def init_db():
         _migrate_columns(engine)
         print("Database initialized successfully!")
 
-        from sqlalchemy import inspect as sa_inspect
-        inspector = sa_inspect(engine)
-        tables = inspector.get_table_names()
-        if "rangers" in tables:
-            from sqlalchemy.orm import Session
-            with Session(bind=engine) as session:
-                from app.models.ranger import Ranger
-                count = session.query(Ranger).count()
-                if count == 0:
-                    print("No rangers found — running seed data...")
-                    from seed_data import seed_database
-                    seed_database()
-                else:
-                    print(f"Database has {count} rangers — skipping seed.")
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT COUNT(*) FROM rangers"))
+            count = result.scalar()
+            if count == 0:
+                print("No rangers found — running seed data...")
+                from seed_data import seed_database
+                seed_database()
+            else:
+                print(f"Database has {count} rangers — skipping seed.")
     except Exception as e:
         print(f"Database initialization failed: {e}")
         raise
