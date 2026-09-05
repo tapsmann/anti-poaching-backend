@@ -1,7 +1,5 @@
 ﻿from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean, ForeignKey, Table
-from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
-from geoalchemy2 import Geometry
 from app.core.database import Base
 from datetime import datetime
 
@@ -19,10 +17,10 @@ class Incident(Base):
     __tablename__ = "incidents"
     
     id = Column(Integer, primary_key=True, index=True)
-    location = Column(Geometry("POINT", srid=4326), nullable=False)
+    location = Column(String(100), nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
-    incident_type = Column(ENUM("poaching", "trespassing", "illegal_logging", "wildfire", "human_wildlife_conflict", "suspicious_activity", name="incident_type"), nullable=False)
-    severity = Column(ENUM("low", "medium", "high", "critical", name="severity"))
+    incident_type = Column(String(30), nullable=False)
+    severity = Column(String(20))
     species_id = Column(Integer, ForeignKey("species.id"))
     protected_area_id = Column(Integer, ForeignKey("protected_areas.id"))
     ranger_id = Column(Integer, ForeignKey("rangers.id"))

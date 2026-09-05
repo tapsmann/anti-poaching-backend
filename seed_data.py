@@ -209,8 +209,7 @@ def seed_database():
                     timestamp=datetime.utcnow() - timedelta(days=days_ago, hours=rng.randint(0, 23)),
                     created_at=datetime.utcnow() - timedelta(days=days_ago),
                 )
-                if has_geo:
-                    inc_data["location"] = point_from_latlng(lat, lng)
+                inc_data["location"] = f"{lat},{lng}"
                 db.add(Incident(**inc_data))
             db.commit()
             print(f"  Added 40 incidents")
@@ -230,8 +229,7 @@ def seed_database():
                     status=rng.choice(["pending", "investigating", "resolved"]),
                     created_at=datetime.utcnow() - timedelta(days=days_ago),
                 )
-                if has_geo:
-                    report_data["location"] = point_from_latlng(lat, lng)
+                report_data["location"] = f"{lat},{lng}"
                 db.add(CommunityReport(**report_data))
             db.commit()
             print(f"  Added 20 community reports")
@@ -243,6 +241,11 @@ def seed_database():
                 patrol_type = rng.choice(PATROL_TYPES)
                 status = rng.choice(STATUSES)
                 started_at = datetime.utcnow() - timedelta(days=rng.randint(0, 60), hours=rng.randint(0, 12))
+                center_lat, center_lng = park_coords.get(area.name, (-19.0, 29.5))
+                lat1, lng1 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
+                lat2, lng2 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
+                lat3, lng3 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
+                route_str = f"{lat1},{lng1} {lat2},{lng2} {lat3},{lng3}"
                 db.add(Patrol(
                     ranger_id=rng.choice(ranger_ids),
                     protected_area_id=rng.choice(area_ids),
@@ -253,6 +256,7 @@ def seed_database():
                     area_covered_km2=round(rng.uniform(8, 65), 1),
                     status=status,
                     notes=f"Patrol notes for {area.name} — {patrol_type}",
+                    route=route_str,
                 ))
             db.commit()
             print(f"  Added 18 patrols")
