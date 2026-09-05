@@ -28,6 +28,7 @@ htmlcov/
 .tox/
 
 # Local config
+.env
 .env.local
 .flaskenv
 alembic/env.py.bak
