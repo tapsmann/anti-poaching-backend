@@ -22,25 +22,44 @@ def get_db():
         db.close()
 
 def _migrate_columns(engine):
-    """Add missing columns to existing tables using raw SQL."""
+    """Add missing columns and convert ENUMs to TEXT for compatibility."""
     from sqlalchemy import inspect
     inspector = inspect(engine)
+
+    enum_to_text = [
+        ("rangers", "role"),
+        ("rangers", "rank"),
+        ("rangers", "specialization"),
+        ("protected_areas", "zone_type"),
+        ("protected_areas", "risk_level"),
+        ("incidents", "incident_type"),
+        ("incidents", "severity"),
+        ("community_reports", "report_type"),
+        ("community_reports", "status"),
+        ("patrols", "patrol_type"),
+        ("patrols", "status"),
+    ]
+    for table, column in enum_to_text:
+        if table in inspector.get_table_names():
+            cols = {c["name"]: c for c in inspector.get_columns(table)}
+            if column in cols:
+                col_type = str(cols[column]["type"]).upper()
+                if "ENUM" in col_type:
+                    try:
+                        with engine.begin() as conn:
+                            conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT"))
+                        print(f"  Converted {table}.{column} from ENUM to TEXT")
+                    except Exception as e:
+                        print(f"  Skip convert {table}.{column}: {e}")
+
     migrations = [
         ("rangers", "role", "TEXT DEFAULT 'ranger'"),
         ("rangers", "rank", "TEXT"),
         ("rangers", "specialization", "TEXT"),
         ("rangers", "assigned_area_id", "INTEGER"),
-        ("protected_areas", "zone_type", "TEXT"),
-        ("protected_areas", "risk_level", "TEXT"),
         ("protected_areas", "size_hectares", "DOUBLE PRECISION"),
         ("protected_areas", "description", "TEXT"),
         ("protected_areas", "is_active", "BOOLEAN DEFAULT TRUE"),
-        ("incidents", "incident_type", "TEXT"),
-        ("incidents", "severity", "TEXT"),
-        ("community_reports", "report_type", "TEXT"),
-        ("community_reports", "status", "TEXT DEFAULT 'pending'"),
-        ("patrols", "patrol_type", "TEXT"),
-        ("patrols", "status", "TEXT DEFAULT 'planned'"),
     ]
     for table, column, col_def in migrations:
         if table in inspector.get_table_names():

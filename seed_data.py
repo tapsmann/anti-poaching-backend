@@ -231,8 +231,7 @@ def seed_database():
                     created_at=datetime.utcnow() - timedelta(days=days_ago),
                 )
                 if has_geo:
-                    report_data["latitude"] = lat
-                    report_data["longitude"] = lng
+                    report_data["location"] = point_from_latlng(lat, lng)
                 db.add(CommunityReport(**report_data))
             db.commit()
             print(f"  Added 20 community reports")
