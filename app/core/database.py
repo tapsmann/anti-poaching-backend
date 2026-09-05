@@ -56,9 +56,6 @@ def _migrate_columns(engine):
 def _ensure_admin_user(engine):
     """Raw SQL guarantee that at least one admin user exists with correct password."""
     from app.core.security import get_password_hash
-    from passlib.context import CryptContext
-
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
     password_hash = get_password_hash("ranger123")
 
     admin_users = [
