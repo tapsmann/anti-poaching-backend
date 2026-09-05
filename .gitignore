@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# ML model artifacts and data dumps (large files — keep out of git)
+ml/models/*.pkl
+ml/**/models/*.pkl
+*.pkl
+*.joblib
+*.onnx
+*.h5
+*.pt
+*.csv
+
+# Tests / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Local config
+.env.local
+.flaskenv
+alembic/env.py.bak
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

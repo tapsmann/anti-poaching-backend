@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     RESET_TOKEN_EXPIRE_MINUTES: int = 30
     ENVIRONMENT: str = "development"
     REGION: str = "zimbabwe"
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,https://anti-poaching-system-gb2e6i6ob.vercel.app,https://anti-poaching-system-btj27sibw.vercel.app"
 
     @property
     def cors_origin_list(self) -> list[str]:
