@@ -70,9 +70,17 @@ def _migrate_columns(engine):
             result.close()
             if row and row[0] != "text":
                 try:
+                    _run_sql(engine, f'DROP INDEX IF EXISTS idx_{table}_{column}')
+                except Exception:
+                    pass
+                try:
                     _run_sql(engine, f'ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT USING ST_AsText({column})')
                 except Exception:
-                    _run_sql(engine, f'ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT')
+                    try:
+                        _run_sql(engine, f'ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT')
+                    except Exception:
+                        _run_sql(engine, f'ALTER TABLE {table} DROP COLUMN {column}')
+                        _run_sql(engine, f'ALTER TABLE {table} ADD COLUMN {column} TEXT')
                 print(f"  Converted {table}.{column} to TEXT (from geometry)")
         except Exception as e:
             print(f"  Skip {table}.{column}: {e}")
