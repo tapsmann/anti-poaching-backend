@@ -64,6 +64,12 @@ def _migrate_columns(engine):
         ("incidents", "location"),
         ("community_reports", "location"),
         ("patrols", "route"),
+        ("alerts", "location"),
+        ("equipment", "current_location"),
+        ("equipment", "last_known_location"),
+        ("patrol_observations", "location"),
+        ("poachers", "last_known_location"),
+        ("species", "geographic_range"),
     ]
     for table, column in geo_cols:
         try:
