@@ -235,31 +235,32 @@ def seed_database():
             print(f"  Added 20 community reports")
 
         existing_patrols = db.query(Patrol).count()
-        if existing_patrols < 5:
-            for i in range(18):
-                area = rng.choice(areas)
-                patrol_type = rng.choice(PATROL_TYPES)
-                status = rng.choice(STATUSES)
-                started_at = datetime.utcnow() - timedelta(days=rng.randint(0, 60), hours=rng.randint(0, 12))
-                center_lat, center_lng = park_coords.get(area.name, (-19.0, 29.5))
-                lat1, lng1 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
-                lat2, lng2 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
-                lat3, lng3 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
-                route_str = f"{lat1},{lng1} {lat2},{lng2} {lat3},{lng3}"
-                db.add(Patrol(
-                    ranger_id=rng.choice(ranger_ids),
-                    protected_area_id=rng.choice(area_ids),
-                    start_time=started_at,
-                    end_time=started_at + timedelta(hours=rng.randint(2, 8)) if status == "completed" else None,
-                    patrol_type=patrol_type,
-                    objectives=f"{patrol_type.replace('_', ' ').title()} patrol in {area.name} sector {rng.randint(1, 5)}",
-                    area_covered_km2=round(rng.uniform(8, 65), 1),
-                    status=status,
-                    notes=f"Patrol notes for {area.name} — {patrol_type}",
-                    route=route_str,
-                ))
+        db.query(Patrol).delete()
+        db.commit()
+        for i in range(18):
+            area = rng.choice(areas)
+            patrol_type = rng.choice(PATROL_TYPES)
+            status = rng.choice(STATUSES)
+            started_at = datetime.utcnow() - timedelta(days=rng.randint(0, 60), hours=rng.randint(0, 12))
+            center_lat, center_lng = park_coords.get(area.name, (-19.0, 29.5))
+            lat1, lng1 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
+            lat2, lng2 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
+            lat3, lng3 = center_lat + rng.uniform(-0.1, 0.1), center_lng + rng.uniform(-0.1, 0.1)
+            route_str = f"{lat1},{lng1} {lat2},{lng2} {lat3},{lng3}"
+            db.add(Patrol(
+                ranger_id=rng.choice(ranger_ids),
+                protected_area_id=rng.choice(area_ids),
+                start_time=started_at,
+                end_time=started_at + timedelta(hours=rng.randint(2, 8)) if status == "completed" else None,
+                patrol_type=patrol_type,
+                objectives=f"{patrol_type.replace('_', ' ').title()} patrol in {area.name} sector {rng.randint(1, 5)}",
+                area_covered_km2=round(rng.uniform(8, 65), 1),
+                status=status,
+                notes=f"Patrol notes for {area.name} — {patrol_type}",
+                route=route_str,
+            ))
             db.commit()
-            print(f"  Added 18 patrols")
+        print(f"  Added 18 patrols with routes")
     except Exception as e:
         db.rollback()
         print(f"  Incidents/reports/patrols seeding failed: {e}")
