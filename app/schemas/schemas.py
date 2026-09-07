@@ -76,6 +76,8 @@ class IncidentCreate(BaseModel):
     ranger_id: Optional[int] = None
     poacher_count: Optional[int] = 0
     evidence_photo: Optional[str] = None
+    verified: Optional[bool] = False
+    is_resolved: Optional[bool] = False
 
 class IncidentUpdate(BaseModel):
     incident_type: Optional[str] = None
@@ -152,12 +154,16 @@ class PointSchema(BaseModel):
     lng: float
 
 class PatrolCreate(BaseModel):
-    ranger_id: int
+    ranger_id: Optional[int] = None
     protected_area_id: Optional[int] = None
-    patrol_type: str
+    patrol_type: str = "routine"
     objectives: Optional[str] = None
     area_covered_km2: Optional[float] = None
     notes: Optional[str] = None
+    route: Optional[List[PointSchema]] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    status: Optional[str] = None
 
 class PatrolUpdate(BaseModel):
     ranger_id: Optional[int] = None
@@ -167,6 +173,8 @@ class PatrolUpdate(BaseModel):
     area_covered_km2: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    route: Optional[List[PointSchema]] = None
+    start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
 
 class PatrolResponse(BaseModel):

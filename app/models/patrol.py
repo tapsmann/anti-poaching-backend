@@ -7,7 +7,7 @@ class Patrol(Base):
     __tablename__ = "patrols"
     
     id = Column(Integer, primary_key=True, index=True)
-    route = Column(String(500), nullable=True)
+    route = Column(Text, nullable=True)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime)
     ranger_id = Column(Integer, ForeignKey("rangers.id"), nullable=False)

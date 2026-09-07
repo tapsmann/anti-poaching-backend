@@ -78,6 +78,9 @@ def seed_database():
 
     try:
         for data in ZIMBABWE_PARKS:
+            center = None
+            if data.get("center_lat") is not None and data.get("center_lng") is not None:
+                center = f"{data['center_lat']},{data['center_lng']}"
             existing = db.query(ProtectedArea).filter(ProtectedArea.name == data["name"]).first()
             if not existing:
                 db.add(ProtectedArea(
@@ -86,7 +89,11 @@ def seed_database():
                     risk_level=data["risk_level"],
                     size_hectares=data["size_hectares"],
                     description=data["description"],
+                    center_point=center,
                 ))
+            elif not existing.center_point and center:
+                # Backfill parks seeded before center_point was stored
+                existing.center_point = center
         db.commit()
         print(f"  Protected areas ready ({len(ZIMBABWE_PARKS)} parks)")
     except Exception as e:

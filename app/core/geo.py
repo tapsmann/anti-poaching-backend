@@ -6,15 +6,18 @@ from geoalchemy2.shape import to_shape
 from shapely.geometry import LineString, Point
 
 
-def point_from_latlng(lat: float, lng: float) -> WKTElement:
-    return WKTElement(f"POINT({lng} {lat})", srid=4326)
+def point_from_latlng(lat: float, lng: float) -> str:
+    # Stored as TEXT ("lat,lng") — see _migrate_columns which converts all
+    # geometry columns to TEXT. latlng_from_geometry() parses this format.
+    return f"{lat},{lng}"
 
 
-def linestring_from_coords(coords: list[dict[str, float]]) -> WKTElement:
+def linestring_from_coords(coords: list[dict[str, float]]) -> str:
     if len(coords) < 2:
         raise ValueError("Route requires at least 2 coordinate points")
     points = [(c["lng"], c["lat"]) for c in coords]
-    return WKTElement(LineString(points).wkt, srid=4326)
+    # Store plain WKT string — coords_from_linestring() parses this format.
+    return LineString(points).wkt
 
 
 def _parse_latlng(text: str):
