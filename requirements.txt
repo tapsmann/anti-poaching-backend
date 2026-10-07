@@ -7,6 +7,9 @@ python-dotenv>=1.0.0
 # Database
 sqlalchemy>=2.0.23,<3.0
 psycopg2-binary>=2.9.9
+# psycopg v3: SQLAlchemy 2.x selects this driver for postgresql+psycopg:// URLs.
+# Install both v2 and v3 so the app works whichever form DATABASE_URL uses.
+psycopg[binary]>=3.1.18
 geoalchemy2>=0.14.1
 shapely>=2.0.0
 
