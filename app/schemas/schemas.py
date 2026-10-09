@@ -3,10 +3,6 @@ from typing import Optional, List
 from datetime import datetime
 
 # ============ Auth Schemas ============
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
@@ -63,6 +59,15 @@ class RangerResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Declared after RangerResponse because FastAPI filters the response body down
+# to the fields listed here. Without `ranger`, POST /login returns only the
+# token and the frontend cannot populate auth state until a page refresh calls
+# /auth/me.
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    ranger: RangerResponse
 
 # ============ Incident Schemas ============
 class IncidentCreate(BaseModel):
